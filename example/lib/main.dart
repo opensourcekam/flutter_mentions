@@ -92,7 +92,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                     ],
                     matchAll: false,
-                    suggestionBuilder: (data) {
+                    suggestionBuilder: (data, index) {
                       return Container(
                         padding: EdgeInsets.all(10.0),
                         child: Row(
