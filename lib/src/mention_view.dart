@@ -5,11 +5,12 @@ class FlutterMentions extends StatefulWidget {
     required this.mentions,
     Key? key,
     this.defaultText,
+    this.disableLocalSearch = false,
     this.suggestionPosition = SuggestionPosition.Bottom,
     this.suggestionListHeight = 300.0,
     this.suggestionListWidth = double.infinity,
-    this.suggestionListPadding = EdgeInsets.zero,
-    this.onMarkupChanged,
+    this.suggestionListPadding = EdgeInsets.zero,   
+     this.onMarkupChanged,
     this.onMentionAdd,
     this.onSearchChanged,
     this.leading = const [],
@@ -52,9 +53,18 @@ class FlutterMentions extends StatefulWidget {
     this.appendSpaceOnAdd = true,
     this.hideSuggestionList = false,
     this.onSuggestionVisibleChanged,
+    this.smartDashesType,
+    this.smartQuotesType,
   }) : super(key: key);
 
+  final SmartDashesType? smartDashesType;
+
+  final SmartQuotesType? smartQuotesType;
+
   final bool hideSuggestionList;
+
+  /// Disable local search/filter.
+  final bool disableLocalSearch;
 
   /// default text for the Mention Input.
   final String? defaultText;
@@ -85,7 +95,6 @@ class FlutterMentions extends StatefulWidget {
   ///
   /// Defaults to `300.0`
   final double suggestionListHeight;
-
    /// Max width for the suggestion list
    ///
    /// Defaults to `double.infinity`
@@ -93,7 +102,6 @@ class FlutterMentions extends StatefulWidget {
 
    /// Suggestion list Padding
    final EdgeInsets suggestionListPadding;
-
   /// A Functioned which is triggered when ever the input changes
   /// but with the markup of the selected mentions
   ///
@@ -422,83 +430,80 @@ class FlutterMentionsState extends State<FlutterMentions> {
         : widget.mentions[0];
 
     return Container(
-      child: Padding(
-        padding: widget.suggestionListPadding,
-        child: PortalEntry(
-          portalAnchor: widget.suggestionPosition == SuggestionPosition.Bottom
-              ? Alignment.topCenter
-              : Alignment.bottomCenter,
-          childAnchor: widget.suggestionPosition == SuggestionPosition.Bottom
-              ? Alignment.bottomCenter
-              : Alignment.topCenter,
-          portal: ValueListenableBuilder(
-            valueListenable: showSuggestions,
-            builder: (BuildContext context, bool show, Widget? child) {
-              return show && !widget.hideSuggestionList
-                  ? OptionList(
-                      suggestionListHeight: widget.suggestionListHeight,
-                      suggestionBuilder: list.suggestionBuilder,
-                      suggestionListDecoration: widget.suggestionListDecoration,
-                      suggestionListWidth: widget.suggestionListWidth,
-                      data: list.data.where((element) {
-                        final ele = element['display'].toLowerCase();
-                        final str = _selectedMention!.str
-                            .toLowerCase()
-                            .replaceAll(RegExp(_pattern), '');
-        
-                        return ele == str ? false : ele.contains(str);
-                      }).toList(),
-                      onTap: (value) {
-                        addMention(value, list);
-                        showSuggestions.value = false;
-                      },
-                    )
-                  : Container();
-            },
-          ),
-          child: Row(
-            children: [
-              ...widget.leading,
-              Expanded(
-                child: TextField(
-                  maxLines: widget.maxLines,
-                  minLines: widget.minLines,
-                  maxLength: widget.maxLength,
-                  focusNode: widget.focusNode,
-                  keyboardType: widget.keyboardType,
-                  keyboardAppearance: widget.keyboardAppearance,
-                  textInputAction: widget.textInputAction,
-                  textCapitalization: widget.textCapitalization,
-                  style: widget.style,
-                  textAlign: widget.textAlign,
-                  textDirection: widget.textDirection,
-                  readOnly: widget.readOnly,
-                  showCursor: widget.showCursor,
-                  autofocus: widget.autofocus,
-                  autocorrect: widget.autocorrect,
-                  maxLengthEnforcement: widget.maxLengthEnforcement,
-                  cursorColor: widget.cursorColor,
-                  cursorRadius: widget.cursorRadius,
-                  cursorWidth: widget.cursorWidth,
-                  buildCounter: widget.buildCounter,
-                  autofillHints: widget.autofillHints,
-                  decoration: widget.decoration,
-                  expands: widget.expands,
-                  onEditingComplete: widget.onEditingComplete,
-                  onTap: widget.onTap,
-                  onSubmitted: widget.onSubmitted,
-                  enabled: widget.enabled,
-                  enableInteractiveSelection: widget.enableInteractiveSelection,
-                  enableSuggestions: widget.enableSuggestions,
-                  scrollController: widget.scrollController,
-                  scrollPadding: widget.scrollPadding,
-                  scrollPhysics: widget.scrollPhysics,
-                  controller: controller,
-                ),
+      child: PortalEntry(
+        portalAnchor:
+            widget.suggestionPosition == SuggestionPosition.Bottom ? Alignment.topCenter : Alignment.bottomCenter,
+        childAnchor:
+            widget.suggestionPosition == SuggestionPosition.Bottom ? Alignment.bottomCenter : Alignment.topCenter,
+        portal: ValueListenableBuilder(
+          valueListenable: showSuggestions,
+          builder: (BuildContext context, bool show, Widget? child) {
+            return show && !widget.hideSuggestionList
+                ? OptionList(
+                    suggestionListHeight: widget.suggestionListHeight,
+                    suggestionListWidth: widget.suggestionListWidth,
+                    suggestionBuilder: list.suggestionBuilder,
+                    suggestionListDecoration: widget.suggestionListDecoration,
+                    data: widget.disableLocalSearch
+                        ? list.data
+                        : list.data.where((element) {
+                            final ele = element['display'].toLowerCase();
+                            final str = _selectedMention!.str.toLowerCase().replaceAll(RegExp(_pattern), '');
+
+                            return ele == str ? false : ele.contains(str);
+                          }).toList(),
+                    onTap: (value) {
+                      addMention(value, list);
+                      showSuggestions.value = false;
+                    },
+                  )
+                : Container();
+          },
+        ),
+        child: Row(
+          children: [
+            ...widget.leading,
+            Expanded(
+              child: TextField(
+                maxLines: widget.maxLines,
+                minLines: widget.minLines,
+                maxLength: widget.maxLength,
+                focusNode: widget.focusNode,
+                keyboardType: widget.keyboardType,
+                keyboardAppearance: widget.keyboardAppearance,
+                textInputAction: widget.textInputAction,
+                textCapitalization: widget.textCapitalization,
+                style: widget.style,
+                textAlign: widget.textAlign,
+                textDirection: widget.textDirection,
+                readOnly: widget.readOnly,
+                showCursor: widget.showCursor,
+                autofocus: widget.autofocus,
+                autocorrect: widget.autocorrect,
+                maxLengthEnforcement: widget.maxLengthEnforcement,
+                cursorColor: widget.cursorColor,
+                cursorRadius: widget.cursorRadius,
+                cursorWidth: widget.cursorWidth,
+                buildCounter: widget.buildCounter,
+                autofillHints: widget.autofillHints,
+                decoration: widget.decoration,
+                expands: widget.expands,
+                onEditingComplete: widget.onEditingComplete,
+                onTap: widget.onTap,
+                onSubmitted: widget.onSubmitted,
+                enabled: widget.enabled,
+                enableInteractiveSelection: widget.enableInteractiveSelection,
+                enableSuggestions: widget.enableSuggestions,
+                scrollController: widget.scrollController,
+                scrollPadding: widget.scrollPadding,
+                scrollPhysics: widget.scrollPhysics,
+                controller: controller,
+                smartDashesType: widget.smartDashesType,
+                smartQuotesType: widget.smartQuotesType,
               ),
-              ...widget.trailing,
-            ],
-          ),
+            ),
+            ...widget.trailing,
+          ],
         ),
       ),
     );
