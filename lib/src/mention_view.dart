@@ -551,17 +551,20 @@ class FlutterMentionsState extends State<FlutterMentions> {
           valueListenable: showSuggestions,
           builder: (BuildContext context, bool show, Widget? child) {
             return show && !widget.hideSuggestionList
-                ? OptionList(
-                    suggestionListHeight: widget.suggestionListHeight,
-                    suggestionListWidth: widget.suggestionListWidth,
-                    suggestionBuilder: widget.mentions.first.suggestionBuilder,
-                    suggestionListDecoration: widget.suggestionListDecoration,
-                    data: suggestionList,
-                    onTap: (value) {
-                      _addMention(value);
-                      showSuggestions.value = false;
-                    },
-                  )
+                ? ClipRRect( // Ensures content is clipped within bounds
+              borderRadius: BorderRadius.circular(8.0),
+              child: OptionList(
+                suggestionListHeight: widget.suggestionListHeight,
+                suggestionListWidth: widget.suggestionListWidth,
+                suggestionBuilder: widget.mentions.first.suggestionBuilder,
+                suggestionListDecoration: widget.suggestionListDecoration,
+                data: suggestionList,
+                onTap: (value) {
+                  _addMention(value);
+                  showSuggestions.value = false;
+                },
+              ),
+            )
                 : Container();
           },
         ),
