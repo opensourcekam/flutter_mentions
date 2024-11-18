@@ -310,31 +310,27 @@ class FlutterMentionsState extends State<FlutterMentions> {
     return data;
   }
 
-  void addMention(Map<String, dynamic> value, [Mention? list]) {
+ void _addMention(Map<String, dynamic> value) {
     final selectedMention = _selectedMention!;
+    final trigger = widget.mentions.firstWhere((mention) =>
+        selectedMention.str.startsWith(mention.trigger));
 
-    setState(() {
-      _selectedMention = null;
-    });
-
-    final _list = widget.mentions
-        .firstWhere((element) => selectedMention.str.contains(element.trigger));
-
-    // find the text by range and replace with the new value.
-    controller!.text = controller!.value.text.replaceRange(
+    final updatedText = controller!.text.replaceRange(
       selectedMention.start,
       selectedMention.end,
-      "${_list.trigger}${value['display']}${widget.appendSpaceOnAdd ? ' ' : ''}",
+      '${trigger.trigger}${value['display']} ',
     );
 
-    if (widget.onMentionAdd != null) widget.onMentionAdd!(value);
+    setState(() {
+      controller!.text = updatedText;
+      controller!.selection = TextSelection.fromPosition(
+        TextPosition(offset: (selectedMention.start + value['display'].length + 1).toInt()),
+      );
+      _selectedMention = null;
+      showSuggestions.value = false;
+    });
 
-    // Move the cursor to next position after the new mentioned item.
-    var nextCursorPosition =
-        selectedMention.start + 1 + value['display']?.length as int? ?? 0;
-    if (widget.appendSpaceOnAdd) nextCursorPosition++;
-    controller!.selection =
-        TextSelection.fromPosition(TextPosition(offset: nextCursorPosition));
+    widget.onMentionAdd?.call(value);
   }
 
   void suggestionListerner() {
@@ -440,10 +436,11 @@ class FlutterMentionsState extends State<FlutterMentions> {
     }
   }
 
-  @override
+@override
   void initState() {
-    final data = mapToAnotation();
+    super.initState();
 
+    final data = _mapToAnnotations();
     controller = AnnotationEditingController(data);
 
     if (widget.defaultText != null) {
@@ -452,19 +449,81 @@ class FlutterMentionsState extends State<FlutterMentions> {
 
     _pattern = widget.mentions.map((e) => e.trigger).join('|');
 
-    // setup a listener to figure out which suggestions to show based on the trigger
-    controller!.addListener(suggestionListerner);
+    controller!.addListener(_suggestionListener);
+    controller!.addListener(_inputListener);
+  }
 
-    controller!.addListener(inputListeners);
+  Map<String, Annotation> _mapToAnnotations() {
+    final data = <String, Annotation>{};
 
-    super.initState();
+    for (var mention in widget.mentions) {
+      if (mention.matchAll) {
+        data['${mention.trigger}([A-Za-z0-9]*)'] = Annotation(
+          style: mention.style,
+          id: null,
+          display: null,
+          trigger: mention.trigger,
+          disableMarkup: mention.disableMarkup,
+          markupBuilder: mention.markupBuilder,
+        );
+      }
+
+      for (var item in mention.data) {
+        data["${mention.trigger}${item['display']}"] = Annotation(
+          style: mention.style,
+          id: item['id'],
+          display: item['display'],
+          trigger: mention.trigger,
+          disableMarkup: mention.disableMarkup,
+          markupBuilder: mention.markupBuilder,
+        );
+      }
+    }
+    return data;
+  }
+
+   void _suggestionListener() {
+    final cursorPos = controller!.selection.baseOffset;
+    if (cursorPos >= 0) {
+      final currentWord = _getWordAtCursor(cursorPos);
+      if (currentWord.startsWith(RegExp(_pattern))) {
+        _updateSuggestions(currentWord);
+      } else {
+        showSuggestions.value = false;
+      }
+    }
+  }
+
+    void _updateSuggestions(String currentWord) {
+    showSuggestions.value = true;
+    _selectedMention = LengthMap(
+      str: currentWord,
+      start: controller!.selection.baseOffset - currentWord.length,
+      end: controller!.selection.baseOffset,
+    );
+
+    final trigger = currentWord[0];
+    final searchQuery = currentWord.substring(1);
+    widget.onSearchChanged?.call(trigger, searchQuery);
+  }
+
+  void _inputListener() {
+    widget.onChanged?.call(controller!.text);
+    widget.onMarkupChanged?.call(controller!.markupText);
+  }
+
+   String _getWordAtCursor(int cursorPos) {
+    final text = controller!.text;
+    final start = text.lastIndexOf(' ', cursorPos - 1) + 1;
+    final end = text.indexOf(' ', cursorPos);
+    return text.substring(start, end == -1 ? text.length : end);
   }
 
   @override
   void dispose() {
-    controller!.removeListener(suggestionListerner);
-    controller!.removeListener(inputListeners);
-
+    controller!.removeListener(_suggestionListener);
+    controller!.removeListener(_inputListener);
+    controller!.dispose();
     super.dispose();
   }
 
@@ -477,11 +536,10 @@ class FlutterMentionsState extends State<FlutterMentions> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter the list based on the selection
-    final list = _selectedMention != null
-        ? widget.mentions.firstWhere(
-            (element) => _selectedMention!.str.contains(element.trigger))
-        : widget.mentions[0];
+   final suggestionList = _selectedMention != null
+        ? widget.mentions.firstWhere((mention) =>
+            _selectedMention!.str.startsWith(mention.trigger)).data
+        : widget.mentions[0].data;
 
     return Container(
       child: PortalEntry(
@@ -496,18 +554,11 @@ class FlutterMentionsState extends State<FlutterMentions> {
                 ? OptionList(
                     suggestionListHeight: widget.suggestionListHeight,
                     suggestionListWidth: widget.suggestionListWidth,
-                    suggestionBuilder: list.suggestionBuilder,
+                    suggestionBuilder: widget.mentions.first.suggestionBuilder,
                     suggestionListDecoration: widget.suggestionListDecoration,
-                    data: widget.disableLocalSearch
-                        ? list.data
-                        : list.data.where((element) {
-                            final ele = element['display'].toLowerCase();
-                            final str = _selectedMention!.str.toLowerCase().replaceAll(RegExp(_pattern), '');
-
-                            return ele == str ? false : ele.contains(str);
-                          }).toList(),
+                    data: suggestionList,
                     onTap: (value) {
-                      addMention(value, list);
+                      _addMention(value);
                       showSuggestions.value = false;
                     },
                   )
