@@ -8,16 +8,23 @@ class AnnotationEditingController extends TextEditingController {
 
   // Generate the Regex pattern for matching all the suggestions in one.
   AnnotationEditingController(this._mapping)
-      : _pattern = _mapping.keys.isNotEmpty
-            ? "(${_mapping.keys.map((key) => RegExp.escape(key)).join('|')})"
-            : null;
+  {
+    _pattern = null;
+
+    if(_mapping.keys.isNotEmpty){
+      var result = _mapping.keys.map((key) => RegExp.escape(key)).toList();
+      result.sort((b,a) => a.toLowerCase().compareTo(b.toLowerCase()));
+      var finalresult = result.join('|');
+      _pattern = finalresult;
+    }
+  }
 
   /// Can be used to get the markup from the controller directly.
   String get markupText {
     final someVal = _mapping.isEmpty
         ? text
         : text.splitMapJoin(
-            RegExp('$_pattern(\\w*)'),
+            RegExp('$_pattern'),
             onMatch: (Match match) {
               final mention = _mapping[match[0]!] ??
                   _mapping[_mapping.keys.firstWhere((element) {
@@ -51,7 +58,11 @@ class AnnotationEditingController extends TextEditingController {
   set mapping(Map<String, Annotation> _mapping) {
     this._mapping = _mapping;
 
-    _pattern = "(${_mapping.keys.map((key) => RegExp.escape(key)).join('|')})";
+    var result = _mapping.keys.map((key) => RegExp.escape(key)).toList();
+    result.sort((b,a) => a.toLowerCase().compareTo(b.toLowerCase()));
+    var finalresult = result.join('|');
+    _pattern = finalresult;
+
   }
 
   @override
@@ -62,7 +73,7 @@ class AnnotationEditingController extends TextEditingController {
       children.add(TextSpan(text: text, style: style));
     } else {
       text.splitMapJoin(
-        RegExp('$_pattern(\\w*)'),
+        RegExp('$_pattern'),
         onMatch: (Match match) {
           if (_mapping.isNotEmpty) {
             final mention = _mapping[match[0]!] ??
