@@ -552,7 +552,7 @@ class FlutterMentionsState extends State<FlutterMentions> {
           builder: (BuildContext context, bool show, Widget? child) {
             return show && !widget.hideSuggestionList
                 ? ClipRRect( // Ensures content is clipped within bounds
-              borderRadius: BorderRadius.circular(8.0),
+              borderRadius: BorderRadius.circular(0),
               child: OptionList(
                 suggestionListHeight: widget.suggestionListHeight,
                 suggestionListWidth: widget.suggestionListWidth,
