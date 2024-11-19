@@ -11,7 +11,7 @@ class OptionList extends StatelessWidget {
   });
 
   final Widget Function(Map<String, dynamic>, int)? suggestionBuilder;
-
+  
   final List<Map<String, dynamic>> data;
 
   final Function(Map<String, dynamic>) onTap;

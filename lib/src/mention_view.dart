@@ -55,6 +55,7 @@ class FlutterMentions extends StatefulWidget {
     this.onSuggestionVisibleChanged,
     this.smartDashesType,
     this.smartQuotesType,
+    this.controller,
   }) : super(key: key);
 
   final SmartDashesType? smartDashesType;
@@ -259,6 +260,8 @@ class FlutterMentions extends StatefulWidget {
   /// {@macro flutter.services.autofill.autofillHints}
   final Iterable<String>? autofillHints;
 
+   final AnnotationEditingController? controller;
+
   @override
   FlutterMentionsState createState() => FlutterMentionsState();
 }
@@ -268,47 +271,6 @@ class FlutterMentionsState extends State<FlutterMentions> {
   ValueNotifier<bool> showSuggestions = ValueNotifier(false);
   LengthMap? _selectedMention;
   String _pattern = '';
-
-  Map<String, Annotation> mapToAnotation() {
-    final data = <String, Annotation>{};
-
-    // Loop over all the mention items and generate a suggestions matching list
-    widget.mentions.forEach((element) {
-      // if matchAll is set to true add a general regex patteren to match with
-      if (element.matchAll) {
-        data['${element.trigger}([A-Za-z0-9])*'] = Annotation(
-          style: element.style,
-          id: null,
-          display: null,
-          trigger: element.trigger,
-          disableMarkup: element.disableMarkup,
-          markupBuilder: element.markupBuilder,
-        );
-      }
-
-      element.data.forEach(
-        (e) => data["${element.trigger}${e['display']}"] = e['style'] != null
-            ? Annotation(
-                style: e['style'],
-                id: e['id'],
-                display: e['display'],
-                trigger: element.trigger,
-                disableMarkup: element.disableMarkup,
-                markupBuilder: element.markupBuilder,
-              )
-            : Annotation(
-                style: element.style,
-                id: e['id'],
-                display: e['display'],
-                trigger: element.trigger,
-                disableMarkup: element.disableMarkup,
-                markupBuilder: element.markupBuilder,
-              ),
-      );
-    });
-
-    return data;
-  }
 
  void _addMention(Map<String, dynamic> value) {
     final selectedMention = _selectedMention!;
@@ -440,6 +402,14 @@ class FlutterMentionsState extends State<FlutterMentions> {
   void initState() {
     super.initState();
 
+    if (widget.controller == null) {
+       final data = MentionsToAnnotationsConverter.convert(widget.mentions);
+
+       controller = AnnotationEditingController(data);
+     } else {
+       controller = widget.controller;
+     }
+
     final data = _mapToAnnotations();
     controller = AnnotationEditingController(data);
 
@@ -531,7 +501,9 @@ class FlutterMentionsState extends State<FlutterMentions> {
   void didUpdateWidget(widget) {
     super.didUpdateWidget(widget);
 
-    controller!.mapping = mapToAnotation();
+  controller ??= widget.controller;
+     controller!.mapping =
+         MentionsToAnnotationsConverter.convert(widget.mentions);
   }
 
   @override
