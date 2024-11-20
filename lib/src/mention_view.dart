@@ -482,12 +482,23 @@ class FlutterMentionsState extends State<FlutterMentions> {
     widget.onMarkupChanged?.call(controller!.markupText);
   }
 
-   String _getWordAtCursor(int cursorPos) {
-    final text = controller!.text;
-    final start = text.lastIndexOf(' ', cursorPos - 1) + 1;
-    final end = text.indexOf(' ', cursorPos);
-    return text.substring(start, end == -1 ? text.length : end);
+String _getWordAtCursor(int cursorPos) {
+  final text = controller!.text;
+
+  // Return empty string if the text is empty or cursor position is invalid
+  if (text.isEmpty || cursorPos < 0 || cursorPos > text.length) {
+    return '';
   }
+
+  // Find the start of the word (before the cursor)
+  final start = (cursorPos > 0) ? text.lastIndexOf(' ', cursorPos - 1) + 1 : 0;
+
+  // Find the end of the word (after the cursor)
+  final end = text.indexOf(' ', cursorPos);
+  
+  // Extract and return the word
+  return text.substring(start, end == -1 ? text.length : end);
+}
 
   @override
   void dispose() {
